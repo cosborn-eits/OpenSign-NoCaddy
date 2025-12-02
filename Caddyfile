@@ -1,12 +1,12 @@
 :3001 {
-    encode zstd gzip
+    encode gzip
 
-    # All API / Parse traffic
-    handle_path /app/* {
+    # API (Parse/OpenSign server)
+    handle_path /app* {
         reverse_proxy server:8080
     }
 
-    # Everything else → front-end
+    # Everything else -> React client
     handle {
         reverse_proxy client:3000
     }
