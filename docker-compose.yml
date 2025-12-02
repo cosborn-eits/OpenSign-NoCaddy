@@ -1,15 +1,15 @@
 version: "3.9"
 
 services:
-  mongo:
-    image: mongo:7
-    container_name: mongo
-    restart: always
+   mongo:
+    image: mongo:latest
+    container_name: mongo-container
     volumes:
       - data-volume:/data/db
+    ports:
+      - "27018:27017"
     networks:
       - app-network
-
   server:
     image: opensign/opensignserver:main
     container_name: opensign-server
