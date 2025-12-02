@@ -15,6 +15,26 @@ services:
     env_file: ./.env
     networks:
       - opensign_net
+      - coolify
+    labels:
+      - "traefik.enable=true"
+
+      # Route /api/* to the server
+      - "traefik.http.routers.opensign-api.rule=Host(`sign.eitsnm.com`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.opensign-api.entrypoints=websecure"
+      - "traefik.http.routers.opensign-api.tls=true"
+      # Let Coolify decide certresolver; if it requires one, you can add:
+      # - "traefik.http.routers.opensign-api.tls.certresolver=coolify"
+
+      # Tell Traefik which container port to use
+      - "traefik.http.services.opensign-api.loadbalancer.server.port=8080"
+
+      # Strip /api before forwarding so /api/app -> /app (matches SERVER_URL)
+      - "traefik.http.middlewares.opensign-api-strip.stripprefix.prefixes=/api"
+      - "traefik.http.routers.opensign-api.middlewares=opensign-api-strip"
+
+      # Use the Traefik network Coolify is on
+      - "traefik.docker.network=coolify"
 
   client:
     image: opensign/opensign:main
@@ -25,7 +45,23 @@ services:
     env_file: ./.env
     networks:
       - opensign_net
+      - coolify
+    labels:
+      - "traefik.enable=true"
+
+      # Everything NOT /api goes to the client (frontend)
+      - "traefik.http.routers.opensign-client.rule=Host(`sign.eitsnm.com`) && !PathPrefix(`/api`)"
+      - "traefik.http.routers.opensign-client.entrypoints=websecure"
+      - "traefik.http.routers.opensign-client.tls=true"
+      # - "traefik.http.routers.opensign-client.tls.certresolver=coolify"  # if needed
+
+      # Send traffic to port 3000 inside this container
+      - "traefik.http.services.opensign-client.loadbalancer.server.port=3000"
+
+      - "traefik.docker.network=coolify"
 
 networks:
   opensign_net:
     driver: bridge
+  coolify:
+    external: true
