@@ -1,4 +1,10 @@
 services:
+  mongo:
+    image: mongo:latest
+    volumes:
+      - /opt/opensign/db:/data/db
+    networks:
+      - opensign_net
 
   server:
     image: opensign/opensignserver:main
@@ -8,64 +14,18 @@ services:
       - mongo
     env_file: ./.env
     networks:
-      - proxy
-      - opensign_net
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.opensign.entrypoints=web"
-      - "traefik.http.routers.opensign.rule=Host(`sign.yourdomain.com`) && PathPrefix(`/api`)"
-      - "traefik.http.middlewares.opensign-https-redirect.redirectscheme.scheme=https"
-      - "traefik.http.routers.opensign.middlewares=opensign-https-redirect"
-
-      - "traefik.http.routers.opensign-secure.entrypoints=websecure"
-      - "traefik.http.routers.opensign-secure.rule=Host(`sign.yourdomain.com`) && PathPrefix(`/api`)"
-      - "traefik.http.routers.opensign-secure.tls=true"
-      - "traefik.http.routers.opensign-secure.tls.certresolver=lets-encrypt"
-      - "traefik.http.routers.opensign-secure.service=opensign"
-      - "traefik.http.services.opensign.loadbalancer.server.port=8080"
-      - "traefik.docker.network=proxy"
-      
-      - "traefik.http.middlewares.opensign-strip.stripprefix.prefixes=/api"
-
-      - "traefik.http.routers.opensign-secure.middlewares=opensign,opensign-strip"
-
-  mongo:
-    image: mongo:latest
-    volumes:
-      - /opt/opensign/db:/data/db
-    expose:
-      - "27017"
-    networks:
       - opensign_net
 
   client:
     image: opensign/opensign:main
+    expose:
+      - "3000"
     depends_on:
       - server
     env_file: ./.env
-    expose:
-      - "3000"
     networks:
-      - proxy
       - opensign_net
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.opensign-client.entrypoints=web"
-      - "traefik.http.routers.opensign-client.rule=Host(`sign.yourdomain.com`) && !PathPrefix(`/api`)"
-      - "traefik.http.middlewares.opensign-client-https-redirect.redirectscheme.scheme=https"
-
-      - "traefik.http.routers.opensign-client-secure.entrypoints=websecure"
-      - "traefik.http.routers.opensign-client-secure.rule=Host(`sign.yourdomain.com`) && !PathPrefix(`/api`)"
-      - "traefik.http.routers.opensign-client-secure.tls=true"
-      - "traefik.http.routers.opensign-client-secure.tls.certresolver=lets-encrypt"
-      - "traefik.http.routers.opensign-client-secure.service=opensign-client"
-      - "traefik.http.services.opensign-client.loadbalancer.server.port=3000"
-      - "traefik.docker.network=proxy"
-
-      - "traefik.http.routers.opensign-client.middlewares=opensign-client-https-redirect,opensign-client"
 
 networks:
-  proxy:
-    external: true
   opensign_net:
     driver: bridge
