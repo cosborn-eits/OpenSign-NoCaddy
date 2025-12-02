@@ -1,57 +1,53 @@
+version: "3.9"
+
 services:
-  server:
-    image: opensign/opensignserver:main
-    container_name: OpenSignServer-container
-    volumes:
-      - opensign-files:/usr/src/app/files
-    depends_on:
-      - mongo
-    env_file: .env.prod
-    environment:
-      - NODE_ENV=production
-      - SERVER_URL=${HOST_URL:-https://localhost:3001}/api/app
-      - PUBLIC_URL=${HOST_URL:-https://localhost:3001}
-    networks:
-      - app-network
   mongo:
-    image: mongo:latest
-    container_name: mongo-container
+    image: mongo:7
+    container_name: mongo
+    restart: always
     volumes:
       - data-volume:/data/db
-    ports:
-      - "27018:27017"
     networks:
       - app-network
+
+  server:
+    image: opensign/opensignserver:main
+    container_name: opensign-server
+    restart: always
+    depends_on:
+      - mongo
+    env_file:
+      - .env.prod
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://mongo:27017/opensigndb
+      - SERVER_URL=${HOST_URL}/api/app
+      - PUBLIC_URL=${HOST_URL}
+      - MASTER_KEY=${MASTER_KEY}
+    networks:
+      - app-network
+    expose:
+      - "8080"   # internal only
+
   client:
     image: opensign/opensign:main
-    container_name: OpenSign-container
+    container_name: opensign-client
+    restart: always
     depends_on:
       - server
-    env_file: .env.prod  
-    ports:
-      - "3000:3000"
-    networks:
-      - app-network
-  caddy:
-    image: caddy:latest
-    container_name: caddy-container
-    ports:
-      - "3001:3001"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
-      - caddy_data:/data
-      - caddy_config:/config
-    networks:
-      - app-network
+    env_file:
+      - .env.prod
     environment:
-      - HOST_URL=${HOST_URL:-localhost:3001}
+      - VITE_API_URL=${HOST_URL}
+    networks:
+      - app-network
+    expose:
+      - "3000"   # internal only
+
 networks:
   app-network:
     driver: bridge
 
 volumes:
   data-volume:
-  web-root:
-  caddy_data:
-  caddy_config:
   opensign-files:
