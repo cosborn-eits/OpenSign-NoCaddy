@@ -1,7 +1,14 @@
-{$HOST_URL} {
-    reverse_proxy client:3000
+:3001 {
+    encode gzip
+
+    # All API traffic goes to the server on :8080
+    # Client calls: https://sign.eitsnm.com/api/app/...
+    # Caddy strips /api → server sees /app/... (matches SERVER_URL)
     handle_path /api/* {
+        uri strip_prefix /api
         reverse_proxy server:8080
-            rewrite * {uri}
     }
+
+    # Everything else goes to the React client on :3000
+    reverse_proxy client:3000
 }
