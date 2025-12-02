@@ -10,13 +10,18 @@ services:
       - opensign_net
 
   server:
-    image: opensign/opensignserver:main
+    image: 'opensign/opensignserver:main'
     restart: unless-stopped
     depends_on:
       - mongo
     env_file: ./.env
+    environment:
+      SERVER_URL: http://server:8080/app
+      PARSE_MOUNT: /app
+      USE_LOCAL: "true"
+      FILES_FOLDER: files
     volumes:
-      - opensign-files:/usr/src/app/files
+      - 'opensign-files:/usr/src/app/files'
     networks:
       - opensign_net
 
