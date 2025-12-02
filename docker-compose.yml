@@ -1,11 +1,11 @@
-version: "3.9"
+version: '3.9'
 
 services:
   mongo:
-    image: mongo:latest
+    image: 'mongo:latest'
     restart: unless-stopped
     volumes:
-      - mongo-data:/data/db
+      - 'mongo-data:/data/db'
     networks:
       - opensign_net
 
@@ -15,18 +15,13 @@ services:
     depends_on:
       - mongo
     env_file: ./.env
-    environment:
-      SERVER_URL: http://server:8080/app
-      PARSE_MOUNT: /app
-      USE_LOCAL: "true"
-      FILES_FOLDER: files
     volumes:
       - 'opensign-files:/usr/src/app/files'
     networks:
       - opensign_net
 
   client:
-    image: opensign/opensign:main
+    image: 'opensign/opensign:main'
     restart: unless-stopped
     depends_on:
       - server
@@ -35,17 +30,15 @@ services:
       - opensign_net
 
   caddy:
-    image: caddy:latest
+    image: 'caddy:latest'
     restart: unless-stopped
     depends_on:
       - client
       - server
-    # Caddy only needs to be reachable INSIDE the Coolify network on 3001.
-    # Coolify/Traefik will connect to this port.
     expose:
-      - "3001"
+      - '3001'
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - './Caddyfile:/etc/caddy/Caddyfile:ro'
     networks:
       - opensign_net
 
