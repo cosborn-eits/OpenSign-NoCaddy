@@ -2,7 +2,7 @@
     encode gzip
 
     # API (Parse/OpenSign server)
-    handle_path /api* {
+    handle_path /app* {
         reverse_proxy server:8080
     }
 
