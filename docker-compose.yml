@@ -1,44 +1,71 @@
 services:
+
   server:
     image: opensign/opensignserver:main
-    container_name: OpenSignServer-container
-    volumes:
-      - opensign-files:/usr/src/app/files
+    expose:
+      - "8080"
     depends_on:
       - mongo
-    env_file: .env.prod
-    environment:
-      - NODE_ENV=production
-      - SERVER_URL=${HOST_URL:-https://localhost:3001}/api/app
-      - PUBLIC_URL=${HOST_URL:-https://localhost:3001}
+    env_file: ./.env
     networks:
-      - app-network
+      - proxy
+      - opensign_net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.opensign.entrypoints=web"
+      - "traefik.http.routers.opensign.rule=Host(`sign.yourdomain.com`) && PathPrefix(`/api`)"
+      - "traefik.http.middlewares.opensign-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.routers.opensign.middlewares=opensign-https-redirect"
+
+      - "traefik.http.routers.opensign-secure.entrypoints=websecure"
+      - "traefik.http.routers.opensign-secure.rule=Host(`sign.yourdomain.com`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.opensign-secure.tls=true"
+      - "traefik.http.routers.opensign-secure.tls.certresolver=lets-encrypt"
+      - "traefik.http.routers.opensign-secure.service=opensign"
+      - "traefik.http.services.opensign.loadbalancer.server.port=8080"
+      - "traefik.docker.network=proxy"
+      
+      - "traefik.http.middlewares.opensign-strip.stripprefix.prefixes=/api"
+
+      - "traefik.http.routers.opensign-secure.middlewares=opensign,opensign-strip"
+
   mongo:
     image: mongo:latest
-    container_name: mongo-container
     volumes:
-      - data-volume:/data/db
-    ports:
-      - "27018:27017"
+      - /opt/opensign/db:/data/db
+    expose:
+      - "27017"
     networks:
-      - app-network
+      - opensign_net
+
   client:
     image: opensign/opensign:main
-    container_name: OpenSign-container
     depends_on:
       - server
-    env_file: .env.prod  
+    env_file: ./.env
     expose:
       - "3000"
     networks:
-      - app-network
-networks:
-  app-network:
-    driver: bridge
+      - proxy
+      - opensign_net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.opensign-client.entrypoints=web"
+      - "traefik.http.routers.opensign-client.rule=Host(`sign.yourdomain.com`) && !PathPrefix(`/api`)"
+      - "traefik.http.middlewares.opensign-client-https-redirect.redirectscheme.scheme=https"
 
-volumes:
-  data-volume:
-  web-root:
-  caddy_data:
-  caddy_config:
-  opensign-files:
+      - "traefik.http.routers.opensign-client-secure.entrypoints=websecure"
+      - "traefik.http.routers.opensign-client-secure.rule=Host(`sign.yourdomain.com`) && !PathPrefix(`/api`)"
+      - "traefik.http.routers.opensign-client-secure.tls=true"
+      - "traefik.http.routers.opensign-client-secure.tls.certresolver=lets-encrypt"
+      - "traefik.http.routers.opensign-client-secure.service=opensign-client"
+      - "traefik.http.services.opensign-client.loadbalancer.server.port=3000"
+      - "traefik.docker.network=proxy"
+
+      - "traefik.http.routers.opensign-client.middlewares=opensign-client-https-redirect,opensign-client"
+
+networks:
+  proxy:
+    external: true
+  opensign_net:
+    driver: bridge
